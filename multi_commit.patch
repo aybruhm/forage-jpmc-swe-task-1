@@ -1,0 +1,172 @@
+From 96f5097b28780f9200526114dc4d831ced2fc119 Mon Sep 17 00:00:00 2001
+From: Abram <israelvictory87@gmail.com>
+Date: Wed, 11 Oct 2023 19:41:13 +0100
+Subject: [PATCH 1/2] Enhancement - apply updates to meet technical
+ requirements
+
+---
+ .gitignore |  1 +
+ client3.py | 15 +++++++++------
+ 2 files changed, 10 insertions(+), 6 deletions(-)
+ create mode 100644 .gitignore
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..ae412d6
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1 @@
++env/
+\ No newline at end of file
+diff --git a/client3.py b/client3.py
+index 3fc09b7..0d6a71a 100644
+--- a/client3.py
++++ b/client3.py
+@@ -31,18 +31,20 @@ N = 500
+ 
+ def getDataPoint(quote):
+     """ Produce all the needed values to generate a datapoint """
+-    """ ------------- Update this function ------------- """
+     stock = quote['stock']
+     bid_price = float(quote['top_bid']['price'])
+     ask_price = float(quote['top_ask']['price'])
+-    price = bid_price
++    price = (bid_price + ask_price) / 2
+     return stock, bid_price, ask_price, price
+ 
+ 
+ def getRatio(price_a, price_b):
+     """ Get ratio of price_a and price_b """
+-    """ ------------- Update this function ------------- """
+-    return 1
++    if (price_b == 0):
++        # This is done to avoid dividing by zero, which
++        # would result in an error.
++        return
++    return price_a / price_b
+ 
+ 
+ # Main
+@@ -51,9 +53,10 @@ if __name__ == "__main__":
+     for _ in iter(range(N)):
+         quotes = json.loads(urllib.request.urlopen(QUERY.format(random.random())).read())
+ 
+-        """ ----------- Update to get the ratio --------------- """
++        prices = {}
+         for quote in quotes:
+             stock, bid_price, ask_price, price = getDataPoint(quote)
++            prices[stock] = price
+             print("Quoted %s at (bid:%s, ask:%s, price:%s)" % (stock, bid_price, ask_price, price))
+ 
+-        print("Ratio %s" % getRatio(price, price))
++        print("Ratio %s" % getRatio(prices["ABC"], prices["DEF"]))
+-- 
+2.42.0
+
+
+From 1517f2a84289d36ec0ac3e63d98c8ebe6f17f1ab Mon Sep 17 00:00:00 2001
+From: Abram <israelvictory87@gmail.com>
+Date: Wed, 11 Oct 2023 20:00:02 +0100
+Subject: [PATCH 2/2] Update - added assertion for test getdata calculate price
+ and calculate price bid greater than ask
+
+---
+ client_test.py | 79 ++++++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 63 insertions(+), 16 deletions(-)
+
+diff --git a/client_test.py b/client_test.py
+index af2bf26..777ef8a 100644
+--- a/client_test.py
++++ b/client_test.py
+@@ -1,25 +1,72 @@
+ import unittest
+ from client3 import getDataPoint
+ 
+-class ClientTest(unittest.TestCase):
+-  def test_getDataPoint_calculatePrice(self):
+-    quotes = [
+-      {'top_ask': {'price': 121.2, 'size': 36}, 'timestamp': '2019-02-11 22:06:30.572453', 'top_bid': {'price': 120.48, 'size': 109}, 'id': '0.109974697771', 'stock': 'ABC'},
+-      {'top_ask': {'price': 121.68, 'size': 4}, 'timestamp': '2019-02-11 22:06:30.572453', 'top_bid': {'price': 117.87, 'size': 81}, 'id': '0.109974697771', 'stock': 'DEF'}
+-    ]
+-    """ ------------ Add the assertion below ------------ """
+-
+-  def test_getDataPoint_calculatePriceBidGreaterThanAsk(self):
+-    quotes = [
+-      {'top_ask': {'price': 119.2, 'size': 36}, 'timestamp': '2019-02-11 22:06:30.572453', 'top_bid': {'price': 120.48, 'size': 109}, 'id': '0.109974697771', 'stock': 'ABC'},
+-      {'top_ask': {'price': 121.68, 'size': 4}, 'timestamp': '2019-02-11 22:06:30.572453', 'top_bid': {'price': 117.87, 'size': 81}, 'id': '0.109974697771', 'stock': 'DEF'}
+-    ]
+-    """ ------------ Add the assertion below ------------ """
+ 
++class ClientTest(unittest.TestCase):
++    def test_getDataPoint_calculatePrice(self):
++        quotes = [
++            {
++                "top_ask": {"price": 121.2, "size": 36},
++                "timestamp": "2019-02-11 22:06:30.572453",
++                "top_bid": {"price": 120.48, "size": 109},
++                "id": "0.109974697771",
++                "stock": "ABC",
++            },
++            {
++                "top_ask": {"price": 121.68, "size": 4},
++                "timestamp": "2019-02-11 22:06:30.572453",
++                "top_bid": {"price": 117.87, "size": 81},
++                "id": "0.109974697771",
++                "stock": "DEF",
++            },
++        ]
++        for quote in quotes:
++            self.assertEqual(
++                getDataPoint(quote),
++                (
++                    quote["stock"],
++                    quote["top_bid"]["price"],
++                    quote["top_ask"]["price"],
++                    (
++                        quote["top_bid"]["price"]
++                        + quote["top_ask"]["price"]
++                    ) / 2,
++                ),
++            )
+ 
+-  """ ------------ Add more unit tests ------------ """
++    def test_getDataPoint_calculatePriceBidGreaterThanAsk(self):
++        quotes = [
++            {
++                "top_ask": {"price": 119.2, "size": 36},
++                "timestamp": "2019-02-11 22:06:30.572453",
++                "top_bid": {"price": 120.48, "size": 109},
++                "id": "0.109974697771",
++                "stock": "ABC",
++            },
++            {
++                "top_ask": {"price": 121.68, "size": 4},
++                "timestamp": "2019-02-11 22:06:30.572453",
++                "top_bid": {"price": 117.87, "size": 81},
++                "id": "0.109974697771",
++                "stock": "DEF",
++            },
++        ]
++        for quote in quotes:
++            self.assertEqual(
++                getDataPoint(quote),
++                (
++                    quote["stock"],
++                    quote["top_bid"]["price"],
++                    quote["top_ask"]["price"],
++                    (
++                        quote["top_bid"]["price"]
++                        + quote["top_ask"]["price"]
++                    ) / 2,
++                ),
++            )
+ 
++    """ ------------ Add more unit tests ------------ """
+ 
+ 
+-if __name__ == '__main__':
++if __name__ == "__main__":
+     unittest.main()
+-- 
+2.42.0
+
